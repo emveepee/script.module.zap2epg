@@ -271,7 +271,7 @@ def mainRun(userdata):
         try:
             logging.info('Writing Stations to xmltv.xml file...')
             try:
-                scheduleSort = OrderedDict(sorted(iter(schedule.items()), key=lambda x: int(x[1]['chnum'])))
+                scheduleSort = OrderedDict(sorted(iter(schedule.items()), key=lambda x: float(x[1]['chnum'])))
             except:
                 scheduleSort = OrderedDict(sorted(iter(schedule.items()), key=lambda x: x[1]['chfcc']))
             for station in scheduleSort:
@@ -323,12 +323,12 @@ def mainRun(userdata):
                                 if edict['epshow'] is not None:
                                     fh.write('\t\t<title lang=\"' + lang + '\">' + re.sub('&','&amp;',edict['epshow']) + '</title>\n')
                                 if edict['eptitle'] is not None:
-                                    showTitle = re.sub('&','&amp;', edict['epshow'])
+                                    showTitle = re.sub('&','&amp;', edict['eptitle'])
                                     if stitle == "true":
                                         safeTitle = re.sub('[\\/*?:"<>|]', "_", showTitle)
-                                        fh.write('\t\t<title lang=\"' + lang + '\">' + safeTitle + '</title>\n')
+                                        fh.write('\t\t<sub-title lang=\"' + lang + '\">' + safeTitle + '</sub-title>\n')
                                     else:
-                                        fh.write('\t\t<title lang=\"' + lang + '\">' + showTitle + '</title>\n')
+                                        fh.write('\t\t<sub-title lang=\"' + lang + '\">' + showTitle + '</sub-title>\n')
                                 if xdesc == 'true':
                                     xdescSort = addXDetails(edict)
                                     fh.write('\t\t<desc lang=\"' + lang + '\">' + re.sub('&','&amp;', xdescSort) + '</desc>\n')

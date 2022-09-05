@@ -31,7 +31,7 @@ import datetime
 import _strptime
 import requests
 
-userdata = xbmc.translatePath(xbmcaddon.Addon().getAddonInfo('profile'))
+userdata = xbmcvfs.translatePath(xbmcaddon.Addon().getAddonInfo('profile'))
 tvhoff = xbmcaddon.Addon().getSetting('tvhoff')
 if not os.path.exists(userdata):
         os.mkdir(userdata)
@@ -78,9 +78,9 @@ if tvhoff == 'true':
         check_load = requests.get(check_url)
         check_status = check_load.raise_for_status()
     except requests.exceptions.HTTPError as err:
-            dialog.ok("Tvheadend Access Error!", str(err), "", "Please check your username/password in settings.")
+            dialog.ok("Tvheadend Access Error!", str(err) +'\nPlease check your username/password in settings.')
     except requests.exceptions.RequestException as e:
-        dialog.ok("Tvheadend Access Error!", "Could not connect to Tvheadend server.", "Please check your Tvheadend server is running or check the IP and port configuration in the settings.")
+        dialog.ok("Tvheadend Access Error!", "Could not connect to Tvheadend server.\nPlease check your Tvheadend server is running or check the IP and port configuration in the settings.")
 
 def get_icon_path(icon_name):
     addon_path = xbmcaddon.Addon().getAddonInfo("path")
@@ -129,11 +129,11 @@ def create_cList():
 def channels():
     lineupcode = xbmcaddon.Addon().getSetting('lineupcode')
     if lineup is None or zipcode is None:
-        dialog.ok('Location not configured!', '', 'Please setup your location before configuring channels.')
+        dialog.ok('Location not configured!', 'Please setup your location before configuring channels.')
     if not os.path.isfile(Clist):
         create_cList()
     else:
-        newList = dialog.yesno('Existing Channel List Found', 'Would you like to download a new channel list or review your current list?', '', 'Select Yes to download new list.')
+        newList = dialog.yesno('Existing Channel List Found', 'Would you like to download a new channel list or review your current list?.','Revew' ,'Download')
         if newList:
             os.remove(Clist)
             create_cList()
@@ -287,10 +287,10 @@ if __name__ == '__main__':
         lineup = xbmcaddon.Addon().getSetting('lineup')
         device = xbmcaddon.Addon().getSetting('device')
         if zipcode == '' or lineup == '':
-            zipConfig = dialog.yesno('No Lineup Configured!', 'You need to configure your lineup location before running zap2epg.', '', 'Would you like to setup your lineup?')
+            zipConfig = dialog.yesno('No Lineup Configured!', 'You need to configure your lineup location before running zap2epg\nWould you like to setup your lineup?')
             if zipConfig:
                 location()
                 xbmc.executebuiltin('Container.Refresh')
     except:
-        dialog.ok('No Lineup Configured!', '', 'Please configure your zipcode and lineup under Change Current Location.')
+        dialog.ok('No Lineup Configured!', 'Please configure your zipcode and lineup under Change Current Location.')
     plugin.run()
