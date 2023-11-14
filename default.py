@@ -24,6 +24,7 @@ import sys
 import logging
 import zap2epg
 import urllib.request, urllib.error, urllib.parse
+from urllib.request import urlopen,Request
 import json
 from collections import OrderedDict
 import time
@@ -31,8 +32,48 @@ import datetime
 import _strptime
 import requests
 
+def  sidLogin():
+    global nextpvr_sid
+    method = 'session.initiate&ver=1.0&device=zap2epg'
+    ret, keys = doRequest(method)
+    if ret == True:
+        nextpvr_sid =  keys['sid']
+        salt = keys['salt']
+        method = 'session.login&md5=' + hashMe(':' + hashMe(nextpvr_pin) + ':' + salt)
+        ret, login  = doRequest(method)
+        if ret and login['stat'] == 'ok':
+            nextpvr_sid =  login['sid']
+
+def doRequest(method, isJSON = True):
+    retval = False
+    getResult = None
+    url = "http://" + nextpvr_url + ":" + str(nextpvr_port) + '/service?method=' + method
+    if not 'session.initiate' in method:
+        url += '&sid=' + nextpvr_sid
+
+    print(url)
+    try:
+        request = Request(url, headers={"Accept" : "application/json"})
+        json_file = urlopen(request, timeout=5)
+        getResult = json.load(json_file)
+        json_file.close()
+        print(json.dumps(getResult))
+        retval = True
+    except Exception as e:
+        print(str(e))
+
+    return retval, getResult
+
+def hashMe (thedata):
+    import hashlib
+    h = hashlib.md5()
+    h.update(thedata.encode('utf-8'))
+    return h.hexdigest()
+
+
 userdata = xbmcvfs.translatePath(xbmcaddon.Addon().getAddonInfo('profile'))
 tvhoff = xbmcaddon.Addon().getSetting('tvhoff')
+nextpvroff = xbmcaddon.Addon().getSetting('nextpvroff')
 if not os.path.exists(userdata):
         os.mkdir(userdata)
 log = os.path.join(userdata, 'zap2epg.log')
@@ -42,6 +83,13 @@ cacheDir = os.path.join(userdata, 'cache')
 plugin = Plugin()
 dialog = xbmcgui.Dialog()
 gridtime = (int(time.mktime(time.strptime(str(datetime.datetime.now().replace(microsecond=0,second=0,minute=0)), '%Y-%m-%d %H:%M:%S'))))
+
+if tvhoff == 'true' and nextpvroff == 'true' :
+    backend = dialog.yesno('Multiple server error', 'Please choose NextPVR or TVHeadend','TVHeadend' ,'NextPVR')
+    if backend:
+        tvhoff = 'false'
+    else:
+        nextpvroff = 'false'
 
 if tvhoff == 'true':
     try:
@@ -80,7 +128,20 @@ if tvhoff == 'true':
     except requests.exceptions.HTTPError as err:
             dialog.ok("Tvheadend Access Error!", str(err) +'\nPlease check your username/password in settings.')
     except requests.exceptions.RequestException as e:
-        dialog.ok("Tvheadend Access Error!", "Could not connect to Tvheadend server.\nPlease check your Tvheadend server is running or check the IP and port configuration in the settings.")
+        dialog.ok("Tvheadend Access Error!", "Could not connect to Tvheadend server\nPlease check your Tvheadend server is running or check the IP and port configuration in the settings.")
+
+
+
+if nextpvroff == 'true':
+
+    nextpvr_url = xbmcaddon.Addon().getSetting('nextpvrurl')
+    nextpvr_port = xbmcaddon.Addon().getSetting('nextpvrport')
+    nextpvr_pin = xbmcaddon.Addon().getSetting('nextpvrpin')
+    global nextpvr_sid
+    nextpvr_sid = None
+    sidLogin()
+    if nextpvr_sid == None:
+        dialog.ok("NextPVR Access Error!", "Could not connect to NextPVR server.\nPlease check your NextPVR server settings.")
 
 def get_icon_path(icon_name):
     addon_path = xbmcaddon.Addon().getAddonInfo("path")
@@ -106,6 +167,25 @@ def create_cList():
                 channelEnabled = ch['enabled']
                 if channelEnabled == True:
                     tvhClist.append(ch['number'])
+    if nextpvroff == 'true':
+        if not os.path.isfile(tvhList):
+            if nextpvr_sid == None:
+                sidLogin()
+            ret, channels = doRequest('channel.list&extras=true')
+            doRequest('session.logout')
+            try:
+                logging.info('Accessing NextPVR channel list')
+                with open(tvhList,"w") as f:
+                    json.dump(channels,f)
+            except urllib.error.HTTPError as e:
+                logging.exception('Exception: tvhClist - %s', e.strerror)
+                pass
+        with open(tvhList) as tvhData:
+            tvhDict = json.load(tvhData)
+            for ch in tvhDict['channels']:
+                channelEnabled = ch['channelEPG']
+                if channelEnabled == 'XMLTV':
+                    tvhClist.append(ch['channelNumberFormated'])
     lineupcode = xbmcaddon.Addon().getSetting('lineupcode')
     url = 'http://tvlistings.zap2it.com/api/grid?lineupId=&timespan=3&headendId=' + lineupcode + '&country=' + country + '&device=' + device + '&postalCode=' + zipcode + '&time=' + str(gridtime) + '&pref=-&userId=-'
     content = urllib.request.urlopen(url).read()
@@ -136,6 +216,7 @@ def channels():
         newList = dialog.yesno('Existing Channel List Found', 'Would you like to download a new channel list or review your current list?.','Revew' ,'Download')
         if newList:
             os.remove(Clist)
+            os.remove(tvhList)
             create_cList()
     with open(Clist) as data:
         stationDict = json.load(data)

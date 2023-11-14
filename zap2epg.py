@@ -89,6 +89,8 @@ def mainRun(userdata):
             tvhmatch = settingsDict[setting]
         if setting == 'stitle':
             stitle = settingsDict[setting]
+        if setting == 'nextpvroff':
+            nextpvroff = settingsDict[setting]
         if setting.startswith('desc'):
             xdescOrderDict[setting] = (settingsDict[setting])
     xdescOrder = [value for (key, value) in sorted(xdescOrderDict.items())]
@@ -99,7 +101,7 @@ def mainRun(userdata):
         country = 'USA'
     else:
         country = 'CAN'
-    logging.info('Running zap2epg-2.0.1 for zipcode: %s and lineup: %s', zipcode, lineup)
+    logging.info('Running zap2epg-2.1.0 for zipcode: %s and lineup: %s', zipcode, lineup)
     pythonStartTime = time.time()
     cacheDir = os.path.join(userdata, 'cache')
     dayHours = int(days) * 8 # set back to 8 when done testing
@@ -260,7 +262,7 @@ def mainRun(userdata):
         logging.info('Creating xmltv.xml file...')
         fh.write("<?xml version=\"1.0\" encoding=\""+ enc + "\"?>\n")
         fh.write("<!DOCTYPE tv SYSTEM \"xmltv.dtd\">\n\n")
-        fh.write("<tv source-info-url=\"http://tvschedule.zap2it.com/\" source-info-name=\"zap2it.com\">\n")
+        fh.write("<tv source-info-url=\"http://tvschedule.zap2it.com/\" generator=\"zap2xml\" source-info-name=\"zap2it.com\">\n")
 
     def printFooter(fh):
         fh.write("</tv>\n")
